@@ -3,12 +3,12 @@ terraform {
     bucket = "workshop-tf-state"
     key = "workshop-production-env-state/terraform.tfstate"
     dynamodb_table = "tf-workshop-env-locks"
-    region = "us-east-1"
+    region = ???
   }
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region = ???
 }
 
 

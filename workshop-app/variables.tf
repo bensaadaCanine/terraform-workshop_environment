@@ -18,11 +18,11 @@ variable "cluster_name" {
 }
 
 variable "workshop-app_cluster_size_min" {
-  default = 2
+  
 }
 
 variable "workshop-app_cluster_size_max" {
-  default = 2
+  
 }
 
 variable "additional_sgs" {
@@ -48,5 +48,5 @@ EOS
 }
 
 variable web-app {
-  default = "apache2"
+  
 } 

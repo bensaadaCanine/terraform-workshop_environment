@@ -21,7 +21,7 @@ Complete all the missing pieces in the /modules/main.tf file
 
 ### WORKSHOP APP
 Complete all the nessacery resources to achieve the followings:
-We want to create a web-application cluster on EC2 instances. 
+We want to create a web-application(apache2 server) cluster on EC2 instances. 
 We like to autoscale the cluster with an Autoscaling group, with 2 intances minimum at a time.
 We want to put the instances behind a load balancer (start with ELB, after everything works, you may try ALB)
 We don't want unhealthy instances to get traffic
@@ -34,7 +34,6 @@ Requirements:
 - The instances should allow incoming traffic on port 80 from the LB only
 - The instances should allow SSH access to the admin user
 - Incoming traffic for each resource must restrict the port-range to the minimum
-- For security groups - use "client" pattern when possible
 
 ### Global-RDS
 Complete all the necessary resources to achieve the followings:
