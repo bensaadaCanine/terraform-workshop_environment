@@ -1,47 +1,51 @@
-
 data "terraform_remote_state" "site" {
   backend = "s3"
   config = {
     bucket = var.terraform_bucket
-    key = var.site_module_state_path
-    region = //"???"
+    key    = var.site_module_state_path
+    region = "us-east-2"
   }
 }
 
 resource "aws_launch_configuration" "workshop-app_lc" {
-  user_data =  //??? use a terraform function with the template file path: "${path.module}/templates/project-app.cloudinit"
-   lifecycle {  # This is necessary to make terraform launch configurations work with autoscaling groups
+  user_data = <<-EOF
+                #!/bin/bash
+                sudo apt update -y
+                sudo apt install apache2 -y
+                sudo systemctl start apache2
+                sudo bash -c 'echo CONGRATS! IT WORKS!!!! YOUR SERVER IS UP!! ${var.cluster_name}  > /var/www/html/index.html'
+                EOF
+  lifecycle {
     create_before_destroy = true
   }
-  security_groups = [aws_security_group.workshop-app.id]
-  name_prefix = "${var.cluster_name}_lc"
+  security_groups   = [aws_security_group.workshop-app.id]
+  name              = "${var.cluster_name}_lc"
   enable_monitoring = false
+  image_id          = var.ami
+  instance_type     = var.instance_type
+  key_name          = data.terraform_remote_state.site.outputs.admin_key_name
 
-  image_id = var.ami
-  instance_type = var.instance_type
-  //??? complete the missing attribute
-  
 }
 
 resource "aws_autoscaling_group" "workshop-app_asg" {
-  name = "${var.cluster_name}_asg"
-  launch_configuration = "${aws_launch_configuration.workshop-app_lc.name}"
-  max_size = //???
-  min_size = //???
-  desired_capacity = //???
-  vpc_zone_identifier = element(data.terraform_remote_state.site.outputs.public_subnets, 0)
-
-  load_balancers = [ aws_elb.workshop-app.name ]
+  name                 = "${var.cluster_name}_asg"
+  launch_configuration = aws_launch_configuration.workshop-app_lc.name
+  max_size             = var.workshop-app_cluster_size_max
+  min_size             = var.workshop-app_cluster_size_min
+  desired_capacity     = var.workshop-app_cluster_size_min
+  vpc_zone_identifier  = data.terraform_remote_state.site.outputs.public_subnets
+  load_balancers       = [aws_elb.workshop-app.name]
+  health_check_type    = "ELB"
 
   tag {
-    key = "Name"
-    value = var.cluster_name
+    key                 = "Name"
+    value               = var.workshop-app
     propagate_at_launch = true
   }
 
   tag {
-    key = "Team"
-    value = "Workshop"
+    key                 = "Team"
+    value               = "Workshop"
     propagate_at_launch = true
   }
 
@@ -51,62 +55,107 @@ resource "aws_autoscaling_group" "workshop-app_asg" {
 }
 
 resource "aws_security_group" "workshop-app_lb" {
-  //??? complete the missing attributes
-
-  name = "${var.cluster_name}-lb"
+  name        = "${var.cluster_name}-lb"
   description = "${var.cluster_name}-lb"
-  vpc_id = //???
+  vpc_id      = data.terraform_remote_state.site.outputs.vpc_id
 
   ingress {
-  //??? complete the missing attributes
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 resource "aws_security_group" "workshop-app_client" {
-  
-  lifecycle {  
+
+  lifecycle {
     create_before_destroy = true
   }
 
-  name = "${var.cluster_name}_client"
+  name        = "${var.cluster_name}_client"
   description = "sg for ${var.cluster_name} app clients"
-  vpc_id = //???
+  vpc_id      = data.terraform_remote_state.site.outputs.vpc_id
+
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.workshop-app_lb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
 }
+
 
 
 resource "aws_security_group" "workshop-app" {
-    //??? complete the missing attributes
-
-  lifecycle {  
+  lifecycle {
     create_before_destroy = true
   }
 
-  name = "${var.cluster_name}_workshop_app"
+  name        = "${var.cluster_name}_workshop_app"
   description = "sg for ${var.cluster_name} workshop app"
+  vpc_id      = data.terraform_remote_state.site.outputs.vpc_id
 
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.workshop-app_lb.id]
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+
 }
 
 resource "aws_elb" "workshop-app" {
-  name = "${var.cluster_name}-lb"
+  name            = "${var.cluster_name}-lb"
+  subnets         = data.terraform_remote_state.site.outputs.public_subnets
+  security_groups = [aws_security_group.workshop-app_lb.id]
 
-  subnets = element(data.terraform_remote_state.site.outputs.public_subnets, 0)
-  security_groups = [ /* ???*/, /* ???*/ ]
 
-  //??? complete the missing attributes
+  listener {
+    instance_port     = 80
+    instance_protocol = "http"
+    lb_port           = 80
+    lb_protocol       = "http"
+  }
+
+  health_check {
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 2
+    target              = "HTTP:80/index.html"
+    interval            = 10
+  }
+
+
 
 }

@@ -3,6 +3,14 @@ variable "multi_az" {
   default = false
 }
 
+variable "username" {
+  default = "bensaada"
+}
+
+variable "password" {
+  default = "bensaada1504"
+}
+
 variable "apply_immediately" {
   default = true
 }
@@ -39,16 +47,15 @@ variable "allocated_storage" {
   default = "20"
 }
 variable "availability_zone" {
-  default = "us-east-1a"
+  default = "us-east-2a"
 }
 
 variable "skip_final_snapshot" {
   default = true
 }
 
-
 variable "terraform_bucket" {
-  default = "workshop-tf-state"
+  default     = "danishemeshterraform"
   description = <<EOS
 S3 bucket with the remote state of the site module.
 The site module is a required dependency of this module
@@ -57,10 +64,12 @@ EOS
 }
 
 variable "site_module_state_path" {
-  default = "workshop-site-state/terraform.tfstate"
+  default     = "workshop-site-state/terraform.tfstate"
   description = <<EOS
 S3 path to the remote state of the site module.
 The site module is a required dependency of this module
 EOS
 
 }
+
+
