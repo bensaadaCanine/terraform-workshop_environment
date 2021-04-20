@@ -8,13 +8,7 @@ data "terraform_remote_state" "site" {
 }
 
 resource "aws_launch_configuration" "workshop-app_lc" {
-  user_data = <<-EOF
-                #!/bin/bash
-                sudo apt update -y
-                sudo apt install apache2 -y
-                sudo systemctl start apache2
-                sudo bash -c 'echo CONGRATS! IT WORKS!!!! YOUR SERVER IS UP!! ${var.cluster_name}  > /var/www/html/index.html'
-                EOF
+  user_data = file("${path.module}/templates/user_data.cloudinit")
   lifecycle {
     create_before_destroy = true
   }
@@ -35,11 +29,10 @@ resource "aws_autoscaling_group" "workshop-app_asg" {
   desired_capacity     = var.workshop-app_cluster_size_min
   vpc_zone_identifier  = data.terraform_remote_state.site.outputs.public_subnets
   load_balancers       = [aws_elb.workshop-app.name]
-  health_check_type    = "ELB"
 
   tag {
     key                 = "Name"
-    value               = var.workshop-app
+    value               = var.cluster_name
     propagate_at_launch = true
   }
 
@@ -84,20 +77,6 @@ resource "aws_security_group" "workshop-app_client" {
   description = "sg for ${var.cluster_name} app clients"
   vpc_id      = data.terraform_remote_state.site.outputs.vpc_id
 
-  ingress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.workshop-app_lb.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
 }
 
 
@@ -122,7 +101,7 @@ resource "aws_security_group" "workshop-app" {
     from_port       = 80
     to_port         = 80
     protocol        = "tcp"
-    security_groups = [aws_security_group.workshop-app_lb.id]
+    security_groups = [aws_security_group.workshop-app_client.id]
   }
 
   ingress {
@@ -138,7 +117,7 @@ resource "aws_security_group" "workshop-app" {
 resource "aws_elb" "workshop-app" {
   name            = "${var.cluster_name}-lb"
   subnets         = data.terraform_remote_state.site.outputs.public_subnets
-  security_groups = [aws_security_group.workshop-app_lb.id]
+  security_groups = [aws_security_group.workshop-app_lb.id,aws_security_group.workshop-app_client.id]
 
 
   listener {

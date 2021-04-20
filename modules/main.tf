@@ -14,13 +14,11 @@ provider "aws" {
 
 module "workshop-app" {
   source       = "../workshop-app"
-  workshop-app = "workshop-app"
 }
 
 
 module "workshop-app2" {
   source       = "../workshop-app"
-  workshop-app = "workshop-app2"
   cluster_name = "workshop-terraform-another"
 }
 

@@ -1,4 +1,4 @@
-// ??? whole file
+
 variable "instance_type" {
   description = "instance type for workshop-app instances"
   default     = "t2.micro"
@@ -29,9 +29,6 @@ variable "workshop-app_cluster_size_max" {
 
 }
 
-variable "additional_sgs" {
-  default = ""
-}
 
 variable "terraform_bucket" {
   default     = "danishemeshterraform"
@@ -51,5 +48,3 @@ EOS
 
 }
 
-variable "workshop-app" {
-}

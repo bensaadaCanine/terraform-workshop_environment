@@ -1,0 +1,15 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+disable_root: false
+
+packages:
+  - git
+
+runcmd:
+  - 'wget https://packages.chef.io/files/stable/chef-workstation/21.2.278/ubuntu/20.04/chef-workstation_21.2.278-1_amd64.deb'
+  - 'dpkg -i chef-workstation_21.2.278-1_amd64.deb'
+  - 'git clone https://github.com/bensaadaCanine/chef-apache.git'
+  - 'chef-solo -c chef-apache/solo.rb -j chef-apache/runlist.json --chef-license=accept'
+
+final_message: "The system is finally up, after $UPTIME seconds"
